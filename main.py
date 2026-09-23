@@ -137,6 +137,23 @@ def main():
             render_full(result, console=console)
 
         if not result.get("found"):
+            suggs = result.get("suggestions", [])
+            if suggs and sys.stdin.isatty() and not (args.json or args.compact):
+                try:
+                    choice = input(f"\n👉 Select option [1-{len(suggs)}] or type word (Enter to exit): ").strip()
+                    if choice.isdigit():
+                        idx = int(choice) - 1
+                        if 0 <= idx < len(suggs):
+                            chosen_word = suggs[idx]
+                            res2 = lookup_word(chosen_word)
+                            render_full(res2, console=console)
+                            return
+                    elif choice and choice.lower() not in ("q", ":q", "exit", "quit"):
+                        res2 = lookup_word(choice)
+                        render_full(res2, console=console)
+                        return
+                except (KeyboardInterrupt, EOFError):
+                    pass
             sys.exit(1)
 
 
