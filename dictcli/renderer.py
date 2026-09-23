@@ -49,14 +49,16 @@ def render_full(result: Dict[str, Any], console: Optional[Console] = None) -> No
         if suggs:
             content.append("Did you mean?\n", style="bold yellow")
             for i, s in enumerate(suggs, 1):
-                content.append(f"  {i}. {s}\n", style="cyan")
+                content.append(f"  [{i}] ", style="bold green")
+                content.append(f"{s}\n", style="bold white")
+            content.append("\n(Type the number to view definition, or enter a new word)", style="dim italic")
 
         console.print(Panel(content, title=title_text, border_style="red", expand=False))
         return
 
     word = result.get("word", "")
     elapsed = result.get("elapsed_ms", 0.0)
-    entries = result.get("entries", [])
+    entries = result.get("entries", [])[:3]  # Keep concise: top 3 most relevant definitions
 
     # Header
     first_entry = entries[0]
@@ -65,7 +67,7 @@ def render_full(result: Dict[str, Any], console: Optional[Console] = None) -> No
     header_text.append(f" {word} ", style="bold cyan")
     if phonetic:
         header_text.append(f" {phonetic} ", style="italic bright_black")
-    header_text.append(f" ⚡ {elapsed:.2f}ms ", style="dim green")
+    header_text.append(f" ⚡ {elapsed:.1f}ms ", style="dim green")
 
     # Body
     body_text = Text()
@@ -75,28 +77,22 @@ def render_full(result: Dict[str, Any], console: Optional[Console] = None) -> No
         defn = entry.get("definition", "").strip()
         example = entry.get("example", "").strip()
         synonyms = entry.get("synonyms", [])
-        source = entry.get("source", "")
 
         # Part of speech badge
         if pos:
-            body_text.append(f"\n[{pos.upper()}]", style="bold green")
-        else:
-            body_text.append(f"\n[ENTRY]", style="bold blue")
-
-        if source and source != "offline":
-            body_text.append(f" ({source})", style="dim")
-        body_text.append("\n")
-
-        # Definition text
-        body_text.append(f"  {idx}. {defn}\n", style="white")
+            body_text.append(f"[{pos.upper()}] ", style="bold green")
+        body_text.append(f"{defn}\n", style="bold white")
 
         # Example if available
         if example:
-            body_text.append(f"     Example: \"{example}\"\n", style="italic bright_black")
+            body_text.append(f"  • Example: \"{example}\"\n", style="italic bright_black")
 
         # Synonyms if available
         if synonyms:
-            body_text.append(f"     Synonyms: {', '.join(synonyms[:5])}\n", style="yellow")
+            body_text.append(f"  • Synonyms: {', '.join(synonyms[:4])}\n", style="dim yellow")
+        
+        if idx < len(entries):
+            body_text.append("\n")
 
     console.print(Panel(body_text, title=header_text, border_style="cyan", expand=False))
 

@@ -96,8 +96,13 @@ def lookup_word(
                 matched_word = variant
                 break
 
-    # Tier 3: Online enrichment fallback
-    if not entries and online_fallback:
+    # Tier 3: Local spelling suggestions (near-instant ~2ms)
+    suggestions: List[str] = []
+    if not entries:
+        suggestions = find_spelling_suggestions(clean_word)
+
+    # Tier 4: Online enrichment fallback (only if no local suggestions exist)
+    if not entries and not suggestions and online_fallback:
         online_entries = fetch_online_and_cache(clean_word)
         if online_entries:
             entries = online_entries
@@ -121,8 +126,6 @@ def lookup_word(
             "elapsed_ms": elapsed_ms
         }
 
-    # Tier 4: Spelling suggestions
-    suggestions = find_spelling_suggestions(clean_word)
     conn.close()
     return {
         "found": False,

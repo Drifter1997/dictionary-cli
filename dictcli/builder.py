@@ -246,48 +246,73 @@ def download_and_build_db(
     progress_callback: Optional[Callable[[str, float], None]] = None
 ) -> int:
     """
-    Download 102,000+ words Webster English Dictionary and compile into SQLite FTS5 database.
-    Takes ~5-8 seconds total.
+    Download and compile 147,000+ words Princeton WordNet dictionary into SQLite FTS5 database.
+    Provides concise, modern, accurate definitions without archaic lengthy paragraphs.
     """
+    import nltk
+    from .config import DATA_DIR
+    nltk_dir = DATA_DIR / "nltk_data"
+    nltk_dir.mkdir(parents=True, exist_ok=True)
+
+    if progress_callback:
+        progress_callback("Downloading WordNet lexical database...", 0.10)
+
+    nltk.download('wordnet', download_dir=str(nltk_dir), quiet=True)
+    if str(nltk_dir) not in nltk.data.path:
+        nltk.data.path.append(str(nltk_dir))
+
+    from nltk.corpus import wordnet as wn
+
     target_path = db_path or DB_PATH
     conn = get_connection(target_path)
     init_db(conn)
 
     if progress_callback:
-        progress_callback("Connecting to dictionary repository...", 0.05)
+        progress_callback("Extracting modern vocabulary and concise definitions...", 0.40)
 
-    req = urllib.request.Request(
-        DICTIONARY_SOURCE_URL,
-        headers={"User-Agent": "dictionary-cli/1.0"}
-    )
-
-    t0 = time.time()
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        content = resp.read().decode("utf-8", errors="replace")
-
-    if progress_callback:
-        progress_callback(f"Downloaded dictionary data in {time.time()-t0:.1f}s. Parsing JSON...", 0.50)
-
-    raw_dict = json.loads(content)
-    total_words = len(raw_dict)
-
-    if progress_callback:
-        progress_callback(f"Parsed {total_words:,} words. Indexing into SQLite FTS5...", 0.70)
-
+    pos_map = {'n': 'noun', 'v': 'verb', 'a': 'adj', 's': 'adj', 'r': 'adv'}
+    all_lemmas = sorted(list(set(wn.all_lemma_names())))
     entries_to_insert: List[Dict[str, Any]] = []
-    for word, defn in raw_dict.items():
-        if word and defn:
-            entries_to_insert.append(parse_webster_entry(word, defn))
 
-    # Also include the curated seed words to ensure rich examples/phonetics
+    # Include curated seed words first for rich phonetics
     entries_to_insert.extend(SEED_ENTRIES)
 
-    t1 = time.time()
-    insert_entries_batch(entries_to_insert, conn)
+    seed_words = {s["word"].lower() for s in SEED_ENTRIES}
+
+    for lemma in all_lemmas:
+        word = lemma.replace('_', ' ')
+        if word.lower() in seed_words:
+            continue
+        synsets = wn.synsets(lemma)
+        for s in synsets[:3]:  # Top 3 most relevant concise senses
+            pos = pos_map.get(s.pos(), s.pos())
+            defn = s.definition()
+            ex = s.examples()[0] if s.examples() else ""
+            syns = [l.name().replace('_', ' ') for l in s.lemmas() if l.name().lower() != lemma.lower()][:4]
+            entries_to_insert.append({
+                "word": word,
+                "pos": pos,
+                "phonetic": "",
+                "definition": defn,
+                "example": ex,
+                "synonyms": syns,
+                "source": "wordnet"
+            })
 
     if progress_callback:
-        progress_callback(f"Indexed {len(entries_to_insert):,} entries in {time.time()-t1:.2f}s!", 1.0)
+        progress_callback(f"Indexing {len(entries_to_insert):,} concise definitions into SQLite FTS5...", 0.80)
+
+    # Re-initialize entries table cleanly
+    with conn:
+        conn.execute("DELETE FROM entries;")
+        conn.execute("DELETE FROM entries_fts;")
+
+    insert_entries_batch(entries_to_insert, conn)
 
     final_count = count_entries(conn)
     conn.close()
+
+    if progress_callback:
+        progress_callback(f"Completed! {final_count:,} words ready in offline database.", 1.0)
+
     return final_count

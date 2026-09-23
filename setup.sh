@@ -58,22 +58,9 @@ echo "Installing dependencies..."
 
 chmod +x "$SCRIPT_DIR/dict-cli" "$SCRIPT_DIR/setup.sh"
 
-# Initialize local database
-echo "Bootstrapping offline SQLite dictionary database..."
-"$VENV_DIR/bin/python" -c "
-from dictcli.db import get_connection
-from dictcli.builder import seed_database
-conn = get_connection()
-seed_database(conn)
-conn.close()
-print('Starter vocabulary seeded successfully.')
-"
-
-# Option to download full 102k dictionary
-if [ "$1" == "--full" ] || [ "$FULL_DB" == "1" ]; then
-    echo "Downloading and indexing full 102,000+ words Webster dictionary (takes ~5s)..."
-    "$VENV_DIR/bin/python" "$SCRIPT_DIR/main.py" --update-db
-fi
+# Initialize local database with modern WordNet dataset
+echo "Compiling modern Princeton WordNet dictionary (concise, accurate definitions)..."
+"$VENV_DIR/bin/python" "$SCRIPT_DIR/main.py" --update-db
 
 # Symlink to ~/.local/bin
 mkdir -p "$HOME/.local/bin"

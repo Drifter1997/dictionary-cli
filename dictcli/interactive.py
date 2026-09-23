@@ -39,37 +39,48 @@ def run_interactive() -> None:
     completer = WordCompleter()
     readline.set_completer(completer.complete)
     readline.parse_and_bind("tab: complete")
-    # Don't split words on hyphens
     readline.set_completer_delims(" \t\n;")
 
-    console.print(Panel(
-        "[bold cyan]📖 Dictionary HUD[/bold cyan]\n"
-        "[dim]Type any word to define. Press [bold]TAB[/bold] for autocomplete.\n"
-        "Press [bold]Ctrl+C[/bold] or type [bold]q[/bold] / [bold]exit[/bold] to return to your game/movie.[/dim]",
-        border_style="cyan",
-        expand=False
-    ))
+    last_suggestions: List[str] = []
+
+    console.clear()
+    console.print(
+        "[bold cyan]📖 Quick Dictionary HUD[/bold cyan] [dim](TAB for autocomplete • Enter or 'q' to close)[/dim]"
+    )
 
     while True:
         try:
-            query = input("\n🔍 Search: ").strip()
-            if not query:
-                continue
+            if last_suggestions:
+                prompt_label = f"\n👉 Choice [1-{len(last_suggestions)}] or word: "
+            else:
+                prompt_label = "\n🔍 Word: "
 
-            if query.lower() in ("q", ":q", "exit", "quit"):
-                console.print("[dim]Exiting dictionary HUD.[/dim]")
+            query = input(prompt_label).strip()
+
+            # Empty input closes the window immediately
+            if not query or query.lower() in ("q", ":q", "exit", "quit"):
                 break
 
-            # Handle commands
-            if query.startswith(":"):
-                cmd = query[1:].lower()
-                if cmd == "clear":
+            # If user entered a number selecting from suggestions
+            if query.isdigit() and last_suggestions:
+                choice_idx = int(query) - 1
+                if 0 <= choice_idx < len(last_suggestions):
+                    target_word = last_suggestions[choice_idx]
+                    last_suggestions = []
                     console.clear()
+                    result = lookup_word(target_word)
+                    render_full(result, console=console)
                     continue
 
+            # Standard word query
+            console.clear()
             result = lookup_word(query)
             render_full(result, console=console)
 
+            if not result.get("found"):
+                last_suggestions = result.get("suggestions", [])
+            else:
+                last_suggestions = []
+
         except (KeyboardInterrupt, EOFError):
-            console.print("\n[dim]Closed.[/dim]")
             break
