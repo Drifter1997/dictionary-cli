@@ -10,9 +10,9 @@ Built with an instant SQLite FTS5 local database, sub-millisecond lookup latency
 
 - **⚡ Sub-millisecond Offline Lookups (<0.5ms)**: Backed by SQLite FTS5 (Full-Text Search) with WAL mode and memory caching. Lookups execute in `~0.15ms` locally.
 - **🎮 Zero-Immersion HUD Overlays**:
-  - **Desktop Notification Overlay** (`--notify [word]`): Flashes definition via Mako/Dunst desktop notification without stealing window focus or interrupting games/movies.
-  - **Screen / Subtitle Clipboard Lookup** (`--notify --clipboard`): Reads highlighted text from Wayland primary selection (`wl-paste -p`) and displays a non-intrusive notification.
-  - **Sway Floating HUD** (`-i` / `--interactive`): Centered floating popup terminal (`foot --app-id=popup-dict`) with live autocompletion, closed with `Esc` or `q`.
+  - **Centered Floating HUD Popup** (`Mod4+Shift+d` / `dict-cli -i`): Centered floating popup terminal (`foot --app-id=popup-dict`) with live autocompletion, closed instantly with `Esc`, `q`, or `Enter`.
+  - **Screen / Subtitle Clipboard Overlay** (`Mod4+Shift+v` / `dict-cli --notify --clipboard`): Reads highlighted text from Wayland primary selection (`wl-paste -p`) or clipboard and flashes a notification without stealing window focus.
+  - **Quick Search Bar Overlay** (`Mod4+Shift+s` / `dict-cli --wofi`): 1-line fast Wofi input dialog that looks up words and displays definitions via notification overlay without interrupting fullscreen games or media.
 - **📚 102,000+ Words Offline**: Bundles Webster's Unabridged Dictionary with rich literary, gaming, and cinematic vocabulary, plus automatic Wiktionary & Datamuse online fallback caching.
 - **🔍 Typo-Tolerant & Morphological Search**: Handles plurals, past tense (`paladins` -> `paladin`), and generates "Did you mean?" suggestions for misheard or misspelled words.
 - **🧠 Vocabulary Study Vault**:
@@ -55,11 +55,26 @@ bindsym Mod4+Shift+v exec dict-cli --notify --clipboard
 bindsym Mod4+Shift+s exec dict-cli --wofi
 ```
 
-Because your Sway configuration already has floating rules for `popup-.*`:
-```sway
-for_window [app_id="popup-.*"] floating enable, resize set 750 450, move position center
-```
-Pressing `Mod4+Shift+d` instantly pops up a clean, centered floating dictionary window over your game or video. Pressing `q` or `Esc` immediately closes it and restores focus!
+### Hotkey Behavior Breakdown
+
+- **`Mod4+Shift+d` — Centered Floating Dictionary HUD Popup (Foot)**:
+  - Opens a clean, centered floating terminal window (`foot --app-id=popup-dict`) powered by live autocompletion over your active game or movie.
+  - Sway's floating window rule applies automatically:
+    ```sway
+    for_window [app_id="popup-.*"] floating enable, resize set 750 450, move position center
+    ```
+  - Type any word, press `TAB` to autocomplete, or select numbered suggestions for misspelled queries.
+  - Pressing `q`, `Esc`, or `Enter` on an empty prompt immediately closes the window and restores focus to your background application.
+
+- **`Mod4+Shift+v` — Screen / Subtitle Clipboard Lookup (Overlay Notification)**:
+  - Instantly grabs whatever text or subtitle you highlighted with your cursor (Wayland primary selection via `wl-paste -p`) or standard clipboard.
+  - Triggers a desktop notification via Mako / Dunst displaying the phonetic pronunciation, part of speech, definition, and example sentence.
+  - **Zero Immersion Break**: Does not steal window focus, minimize fullscreen games, or interrupt video playback.
+
+- **`Mod4+Shift+s` — Quick Wofi Search Bar Overlay (Overlay Notification)**:
+  - Summons a fast, minimalist 1-line input dialog on screen (`wofi --dmenu -p "Dictionary Search:"`).
+  - Type a query and hit `Enter`; the definition immediately pops up as a desktop notification without switching workspaces.
+  - Hit `Esc` anytime to cancel and dismiss the search prompt.
 
 ---
 
@@ -79,20 +94,23 @@ dict-cli -c eldritch
 # Output: eldritch (/ˈɛl.drɪtʃ/) [adj.] • Weird, sinister, or otherworldly; unearthly and eerie.
 ```
 
-### 3. Notification Overlay (Zero Focus Switch)
+### 3. Notification & Clipboard Overlays
 ```bash
 # Define word directly via desktop notification:
 dict-cli --notify serendipity
 
-# Define whatever text you just highlighted with mouse / subtitles:
+# Define whatever text you just highlighted with mouse / subtitles (Mod4+Shift+v):
 dict-cli --notify --clipboard
+
+# Quick 1-line Wofi search bar -> Notification (Mod4+Shift+s):
+dict-cli --wofi
 ```
 
-### 4. Interactive HUD Mode
+### 4. Interactive HUD Mode (Mod4+Shift+d)
 ```bash
 dict-cli -i
 ```
-Type any word and press `Enter`. Press `TAB` for live autocompletion. Type `q` or press `Ctrl+C` to exit.
+Type any word and press `Enter`. Press `TAB` for live autocompletion. Type `q`, `Esc`, or press `Ctrl+C` to exit.
 
 ### 5. Vocabulary Study Vault & Anki Export
 ```bash
