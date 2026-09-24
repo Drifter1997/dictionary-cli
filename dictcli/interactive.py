@@ -45,7 +45,7 @@ def run_interactive() -> None:
 
     console.clear()
     console.print(
-        "[bold cyan]📖 Quick Dictionary HUD[/bold cyan] [dim](TAB for autocomplete • Enter or 'q' to close)[/dim]"
+        "[bold cyan]📖 Quick Dictionary HUD[/bold cyan] [dim](TAB for autocomplete • Enter, 'q', or Esc to close)[/dim]"
     )
 
     while True:
@@ -57,8 +57,8 @@ def run_interactive() -> None:
 
             query = input(prompt_label).strip()
 
-            # Empty input closes the window immediately
-            if not query or query.lower() in ("q", ":q", "exit", "quit"):
+            # Empty input or quit commands close the window immediately
+            if not query or query.lower() in ("q", ":q", "exit", "quit") or "\x1b" in query:
                 break
 
             # If user entered a number selecting from suggestions
